@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Tracker Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<!-- ===== APP CONTAINER (IMPORTANT FIX) ===== -->
+<div class="app-container">
+
+  <!-- ================= NAVBAR ================= -->
+  <div class="navbar">
+    <h2>Job Tracker</h2>
+    <div>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="profile.html">Profile</a>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- ================= STATS ================= -->
+  <div id="stats" class="stats"></div>
+
+  <!-- ================= SEARCH & FILTER ================= -->
+  <h3>Search & Filter</h3>
+  <input type="text" id="searchCompany" placeholder="Search by company">
+
+  <select id="filterStatus">
+    <option value="">All Status</option>
+    <option>Applied</option>
+    <option>Shortlisted</option>
+    <option>Interview</option>
+    <option>Rejected</option>
+    <option>Offer</option>
+  </select>
+
+  <button onclick="loadJobs()">Apply</button>
+
+  <!-- ================= ADD JOB ================= -->
+  <h3>Add Job</h3>
+
+  <form id="addJobForm">
+    <input type="text" id="company" placeholder="Company" required>
+    <input type="text" id="role" placeholder="Role" required>
+    <input type="text" id="jobLocation" placeholder="Location">
+    <input type="date" id="appliedDate" required>
+
+    <button type="submit">Add Job</button>
+  </form>
+
+  <!-- ================= JOB TABLE ================= -->
+  <table id="jobsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Location</th>
+        <th>Applied Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="jobsBody"></tbody>
+  </table>
+
+  <div id="emptyMsg" style="display:none;">No job applications yet.</div>
+
+</div>
+<!-- ===== END APP CONTAINER ===== -->
+
+<!-- ================= DELETE MODAL ================= -->
+<div id="deleteModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Delete Job?</h3>
+    <p>This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= JAVASCRIPT ================= -->
+<script>
+/* ============ AUTH ============ */
+const JWT_TOKEN = localStorage.getItem("jwt_token");
+if (!JWT_TOKEN) {
+  window.location.href = "login.html";
+}
+
+/* ============ LOAD JOBS ============ */
+function loadJobs() {
+  const company = document.getElementById("searchCompany").value;
+  const status = document.getElementById("filterStatus").value;
+
+  let url = "http://localhost:5000/jobs?";
+  if (company) url += "company=" + encodeURIComponent(company) + "&";
+  if (status) url += "status=" + encodeURIComponent(status);
+
+  fetch(url, {
+    headers: { "Authorization": "Bearer " + JWT_TOKEN }
+  })
+  .then(res => res.json())
+  .then(data => {
+
+    if (!Array.isArray(data)) {
+      localStorage.removeItem("jwt_token");
+      window.location.href = "login.html";
+      return;
+    }
+
+    const table = document.getElementById("jobsTable");
+    const body = document.getElementById("jobsBody");
+    const empty = document.getElementById("emptyMsg");
+
+    body.innerHTML = "";
+
+    const stats = {
+      Applied: data.length,
+      Shortlisted: data.filter(j => j.status === "Shortlisted").length,
+      Interview: data.filter(j => j.status === "Interview").length,
+      Rejected: data.filter(j => j.status === "Rejected").length,
+      Offer: data.filter(j => j.status === "Offer").length
+    };
+
+    document.getElementById("stats").innerHTML = `
+      <div class="stat-card stat-applied">Applied<br>${stats.Applied}</div>
+      <div class="stat-card stat-shortlisted">Shortlisted<br>${stats.Shortlisted}</div>
+      <div class="stat-card stat-interview">Interview<br>${stats.Interview}</div>
+      <div class="stat-card stat-rejected">Rejected<br>${stats.Rejected}</div>
+      <div class="stat-card stat-offer">Offer<br>${stats.Offer}</div>
+    `;
+
+    if (data.length === 0) {
+      table.style.display = "none";
+      empty.style.display = "block";
+      return;
+    }
+
+    table.style.display = "table";
+    empty.style.display = "none";
+
+    data.forEach(job => {
+      body.innerHTML += `
+        <tr>
+          <td>${job.company}</td>
+          <td>${job.role}</td>
+          <td id="status-${job.id}">
+            <span class="status ${job.status}">${job.status}</span>
+          </td>
+          <td>${job.location || "-"}</td>
+          <td>${new Date(job.applied_date).toLocaleDateString("en-GB")}</td>
+          <td class="action-cell">
+            ${
+              (job.status !== "Rejected" && job.status !== "Offer")
+              ? `<button onclick="openEdit(${job.id}, '${job.status}')">Edit</button>`
+              : `<span style="color:gray;font-size:12px;"></span>`
+            }
+            <button onclick="deleteJob(${job.id})">Delete</button>
+          </td>
+        </tr>
+      `;
+    });
+  });
+}
+
+/* ============ ADD JOB ============ */
+document.getElementById("addJobForm").addEventListener("submit", addJob);
+
+function addJob(e) {
+  e.preventDefault();
+
+  fetch("http://localhost:5000/jobs", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + JWT_TOKEN
+    },
+    body: JSON.stringify({
+      company: company.value.trim(),
+      role: role.value.trim(),
+      location: jobLocation.value.trim(),
+      status: "Applied",
+      applied_date: appliedDate.value
+    })
+  }).then(() => {
+    addJobForm.reset();
+    loadJobs();
+  });
+}
+
+/* ============ INLINE EDIT ============ */
+function openEdit(id, currentStatus) {
+  document.getElementById(`status-${id}`).innerHTML = `
+    <select id="select-${id}">
+      <option>Applied</option>
+      <option>Shortlisted</option>
+      <option>Interview</option>
+      <option>Rejected</option>
+      <option>Offer</option>
+    </select>
+    <button onclick="saveStatus(${id})">Save</button>
+    <button onclick="loadJobs()">Cancel</button>
+  `;
+  document.getElementById(`select-${id}`).value = currentStatus;
+}
+
+function saveStatus(id) {
+  const newStatus = document.getElementById(`select-${id}`).value;
+
+  fetch(`http://localhost:5000/jobs/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + JWT_TOKEN
+    },
+    body: JSON.stringify({ status: newStatus })
+  }).then(loadJobs);
+}
+
+/* ============ DELETE WITH MODAL ============ */
+let deleteJobId = null;
+
+function deleteJob(id) {
+  deleteJobId = id;
+  document.getElementById("deleteModal").classList.add("active");
+}
+
+function closeDeleteModal() {
+  deleteJobId = null;
+  document.getElementById("deleteModal").classList.remove("active");
+}
+
+function confirmDelete() {
+  if (!deleteJobId) return;
+
+  fetch(`http://localhost:5000/jobs/${deleteJobId}`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": "Bearer " + JWT_TOKEN
+    }
+  })
+  .then(() => {
+    closeDeleteModal();
+    loadJobs();
+  });
+}
+
+/* ============ LOGOUT ============ */
+function logout() {
+  localStorage.removeItem("jwt_token");
+  window.location.href = "login.html";
+}
+
+/* ============ INIT ============ */
+loadJobs();
+</script>
+
+</body>
+</html>

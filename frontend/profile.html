@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile | Job Tracker</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<div class="navbar">
+  <h2>Job Tracker</h2>
+  <div>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="profile.html">Profile</a>
+    <button onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<!-- ===== PROFILE CARD ===== -->
+<div class="profile-container">
+
+  <div class="profile-card">
+    <div class="profile-avatar">
+      <span id="profileInitial">U</span>
+    </div>
+
+    <h2 id="profileName">User Name</h2>
+    <p id="profileEmail">user@email.com</p>
+
+    <div class="profile-info">
+      <div>
+        <strong>Account Type</strong>
+        <span>Google Sign-In</span>
+      </div>
+      <div>
+        <strong>Status</strong>
+        <span class="active">Active</span>
+      </div>
+    </div>
+
+    <button class="danger-btn" onclick="logout()">
+      Logout
+    </button>
+  </div>
+
+</div>
+
+<script>
+/* ===== AUTH CHECK ===== */
+const JWT_TOKEN = localStorage.getItem("jwt_token");
+const USER_DATA = JSON.parse(localStorage.getItem("user"));
+
+if (!JWT_TOKEN || !USER_DATA) {
+  window.location.href = "login.html";
+}
+
+/* ===== LOAD PROFILE ===== */
+document.getElementById("profileName").textContent = USER_DATA.name;
+document.getElementById("profileEmail").textContent = USER_DATA.email;
+document.getElementById("profileInitial").textContent =
+  USER_DATA.name.charAt(0).toUpperCase();
+
+/* ===== LOGOUT ===== */
+function logout() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
+
+</script>
+
+</body>
+</html>

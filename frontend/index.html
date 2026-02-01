@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Tracker</title>
+  <script>
+    // if logged in → dashboard
+    if (localStorage.getItem("jwt_token")) {
+      window.location.href = "dashboard.html";
+    } 
+    // else → login
+    else {
+      window.location.href = "login.html";
+    }
+  </script>
+</head>
+<body>
+</body>
+</html>
