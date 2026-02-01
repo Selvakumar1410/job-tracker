@@ -1,9 +1,0 @@
-flask
-flask-cors
-mysql-connector-python
-requests
-pyjwt
-scikit-learn
-pdfminer.six
-python-docx
-gunicorn

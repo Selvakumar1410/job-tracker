@@ -7,7 +7,7 @@ from profile import profile_bp
 app = Flask(__name__)
 CORS(app)
 
-# register auth routes
+# Register blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(jobs_bp)
 app.register_blueprint(profile_bp)
@@ -15,7 +15,9 @@ app.register_blueprint(profile_bp)
 
 @app.route("/")
 def home():
-    return "Backend is running"
+    return "Backend is running 🚀"
 
+
+# IMPORTANT for deployment
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
